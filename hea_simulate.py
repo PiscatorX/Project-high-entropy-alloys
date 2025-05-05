@@ -28,7 +28,7 @@ def simulate_alloy(metal_combinations):
         
     #We create the simulate HEA database
     alloy_compsn_df = pd.DataFrame(alloys_compsn_list)
-    #alloy_compsn_df['Alloy'] = alloys_names_list
+    alloy_compsn_df['Alloy'] = alloys_names_list
     logging.info(f"Added Alloy properties: { ', '.join(sorted(alloy_compsn_df.columns))}")
     
     return alloy_compsn_df
@@ -69,14 +69,10 @@ def finalise_data(ref_dataset, HEA_data, impute_missing = True):
     ref_cols = set(hea_analysis.PREDICTOR_VARS)
     other_cols = set(HEA_data.columns)
     missing_cols = ref_cols - other_cols
-    # BET Surface area
-    # Space velocity
-    # Synthesis Methods
     
     if impute_missing:
        
        for col in missing_cols:
-
            if col in ref_metals:
               HEA_data.loc[HEA_data.index,col] = 0
            elif is_numeric_dtype(ref_dataset[col]):
@@ -89,6 +85,7 @@ def finalise_data(ref_dataset, HEA_data, impute_missing = True):
 
     #order the columns as they appear in the reference          
     HEA_data = HEA_data[hea_analysis.PREDICTOR_VARS]
+    HEA_data = HEA_data.fillna(0)
     
     return HEA_data
            
@@ -122,7 +119,7 @@ def progress(other_df):
 if __name__ == "__main__":
    
      choose_n = 5
-     #metals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe','Co', 'Ni', 'Cu', 'Zn']
+     #etals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V']
      ref_metals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe','Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh','Pd', 'Ag', 'Cd', 'In', 'Sn', 'La', 'Ce', 'Pr', 'Gd', 'Ir', 'Pt']
      metals = ref_metals
      
@@ -133,7 +130,6 @@ if __name__ == "__main__":
      logging.info("Reference columns : %d", ref_n)
 
      metal_combinations = combinations(metals, choose_n)
-     print(metal_combinations)
      alloy_compsn_df = simulate_alloy(metal_combinations)
      progress(alloy_compsn_df)
      alloy_props_df = add_properties(alloy_compsn_df)
