@@ -10,8 +10,7 @@ import swifter
 import logging
 import pprint
 
-
-
+PREDICTOR_VARS = + ['Alloy'] + hea_analysis.PREDICTOR_VARS 
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
@@ -23,8 +22,6 @@ def simulate_alloy(metal_combinations):
         composition = alloy_composition(metals)
         alloys_names_list.append(''.join(metals))
         alloys_compsn_list.append(composition)
-        # if i == 10:
-        #    break
         
     #We create the simulate HEA database
     alloy_compsn_df = pd.DataFrame(alloys_compsn_list)
@@ -84,7 +81,7 @@ def finalise_data(ref_dataset, HEA_data, impute_missing = True):
               logging.info("Imputed random value for missing column: %s",col)
 
     #order the columns as they appear in the reference          
-    HEA_data = HEA_data[hea_analysis.PREDICTOR_VARS]
+    HEA_data = HEA_data[PREDICTOR_VARS]
     HEA_data = HEA_data.fillna(0)
     
     return HEA_data
@@ -103,7 +100,7 @@ def progress(other_df):
         other_df (pd.DataFrame): DataFrame to compare against.
     """
     
-    ref_cols = set(hea_analysis.PREDICTOR_VARS)
+    ref_cols = set(PREDICTOR_VARS)
     other_cols = set(other_df.columns)
     common_cols = ref_cols & other_cols
     
@@ -119,13 +116,15 @@ def progress(other_df):
 if __name__ == "__main__":
    
      choose_n = 5
-     #etals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V']
-     ref_metals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V', 'Cr', 'Mn', 'Fe','Co', 'Ni', 'Cu', 'Zn', 'Ga', 'Y', 'Zr', 'Nb', 'Mo', 'Tc', 'Ru', 'Rh','Pd', 'Ag', 'Cd', 'In', 'Sn', 'La', 'Ce', 'Pr', 'Gd', 'Ir', 'Pt']
+     #metals = [ 'Mg', 'Al', 'Si', 'Ca', 'Sc', 'Ti', 'V']
+     ref_metals = ['Ag', 'Al', 'Ca', 'Cd', 'Ce', 'Co', 'Cr', 'Cu', 'Fe', 'Ga', 'Gd', 'In', 'Ir', 'La', 'Mg', 'Mn', 'Mo',
+                   'Nb', 'Ni', 'Pd', 'Pr', 'Pt', 'Rh', 'Ru', 'Sc', 'Si', 'Sn', 'Tc', 'Ti', 'V', 'Y', 'Zn', 'Zr']
+
      metals = ref_metals
-     
      args = hea_analysis.main()
      ref_dataset = hea_analysis.get_db(args.filename)
-     ref_dataset = ref_dataset[hea_analysis.PREDICTOR_VARS] 
+     print(ref_dataset.columns)
+     ref_dataset = ref_dataset[PREDICTOR_VARS] 
      ref_n = len(ref_dataset.columns)
      logging.info("Reference columns : %d", ref_n)
 

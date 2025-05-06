@@ -1,43 +1,32 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import KFold
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from skopt import BayesSearchCV
-from skopt.space import Integer, Categorical
-import numpy as np
-import joblib
-import logging
-import json
-from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.impute import SimpleImputer
-import matplotlib.pyplot as plt
 import seaborn as sns
-import pandas as pd
-import numpy as np
-import argparse
-import logging
 import pprint
+import pandas as pd
 import os
 import numpy as np
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import RFECV
-from sklearn.model_selection import KFold
-from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import classification_report, accuracy_score
-import numpy as np
-import logging
-import joblib
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-from sklearn.model_selection import GridSearchCV
 import matplotlib.pyplot as plt
-import seaborn as sns
+import logging
+import json
+import joblib
+import argparse
+from skopt.space import Integer, Categorical
+from skopt import BayesSearchCV
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import KFold
+from sklearn.model_selection import ShuffleSplit
+from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn.impute import SimpleImputer
+from sklearn.feature_selection import RFECV
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestClassifier
 
 
 
@@ -46,39 +35,40 @@ from sklearn.metrics import r2_score
 logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 # List predictor variables and order of variables
-PREDICTOR_VARS = ['Mg',
+PREDICTOR_VARS = [
+ 'Ag',
  'Al',
- 'Si',
  'Ca',
+ 'Cd',
+ 'Ce',
+ 'Co',
+ 'Cr',
+ 'Cu',
+ 'Fe',
+ 'Ga',
+ 'Gd',
+ 'In',
+ 'Ir',
+ 'La',
+ 'Mg',
+ 'Mn',
+ 'Mo',
+ 'Nb',
+ 'Ni',
+ 'Pd',
+ 'Pr',
+ 'Pt',
+ 'Rh',
+ 'Ru',
  'Sc',
+ 'Si',
+ 'Sn',
+ 'Tc',
  'Ti',
  'V',
- 'Cr',
- 'Mn',
- 'Fe',
- 'Co',
- 'Ni',
- 'Cu',
- 'Zn',
- 'Ga',
  'Y',
+ 'Zn',
  'Zr',
- 'Nb',
- 'Mo',
- 'Tc',
- 'Ru',
- 'Rh',
- 'Pd',
- 'Ag',
- 'Cd',
- 'In',
- 'Sn',
- 'La',
- 'Ce',
- 'Pr',
- 'Gd',
- 'Ir',
- 'Pt',
  'Weighted atomic radius',
  '$\\Delta$R$\\mathregular{_{}}$ $\\mathregular{^{}}$',
  'VEC',
@@ -106,6 +96,7 @@ def get_db(db_filename):
     logging.info(f"Filename provided: {db_filename}")
     # Importing the dataset
     dataset = pd.read_csv(db_filename, encoding='latin-1')
+
     
     return dataset
 
@@ -239,7 +230,7 @@ def train_split(dataset, test_size = 0.3):
 
 def run_RF_with_bayesian_tuning(X_train, X_test, y_train, y_test, X_full, y_full,
                                  model_output_path='final_model.joblib',
-                                 random_state=42, n_splits=10, n_iter=32):
+                                 random_state=42, n_splits=3, n_iter=50):
     """
     Trains a Random Forest Regressor with Bayesian hyperparameter tuning,
     evaluates performance before and after tuning, retrains on full dataset,
@@ -256,6 +247,10 @@ def run_RF_with_bayesian_tuning(X_train, X_test, y_train, y_test, X_full, y_full
     baseline_model = RandomForestRegressor(random_state=random_state)
     baseline_model.fit(X_train, y_train.ravel())
 
+    model_params = baseline_model.get_params()
+
+    print(model_params)
+    
     y_pred_base = baseline_model.predict(X_test)
     rmse_base = np.sqrt(mean_squared_error(y_test, y_pred_base))
     mae_base = mean_absolute_error(y_test, y_pred_base)
@@ -271,20 +266,19 @@ def run_RF_with_bayesian_tuning(X_train, X_test, y_train, y_test, X_full, y_full
     # -------------------------------
 
     param_space = {
-    'n_estimators': Integer(1, 100),          # Reduce upper bound: 1000 trees is overkill
-    'max_depth': Integer(3, 15),                # Shallow trees reduce overfitting risk
-    'min_samples_split': Integer(4, 10),        # Prevents over-splitting on small data
-    'min_samples_leaf': Integer(2, 10),         # Larger leaf sizes force generalization
-    'max_features': Categorical(['sqrt'])       # 'sqrt' generally works well for RF
+    'n_estimators': Integer(50, 100),          
+    'max_depth': Integer(3, 10),                
+    'min_samples_split': Integer(4, 10),        
+    'min_samples_leaf': Integer(1, min(X_train.shape[1], 20))      
     }
-    
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    cv = ShuffleSplit(n_splits=5, test_size=0.2, random_state=random_state)
 
     bayes_search = BayesSearchCV(estimator=RandomForestRegressor(random_state=random_state),
                                  search_spaces=param_space,
                                  n_iter=n_iter,
-                                 cv=kf,
-                                 scoring='r2',
+                                 cv=cv,
+                                 scoring='neg_mean_squared_error',
                                  n_jobs=-1,
                                  random_state=random_state,
                                  verbose=1)
@@ -386,6 +380,7 @@ def main():
 if __name__ == "__main__":
     args = main()
     dataset = get_db(args.filename)
+    dataset = dataset.drop('Alloy', axis=1)
     imputed_dataset = db_impute(dataset)
     (X_full, y_full, X_train, X_test, y_train, y_test) = train_split(imputed_dataset)
     final_model, best_params, metrics = run_RF_with_bayesian_tuning(X_train, X_test, y_train, y_test, X_full, y_full)
